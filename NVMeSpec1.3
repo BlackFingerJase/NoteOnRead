@@ -1,0 +1,46 @@
+1. NVMe 简介
+
+1.1 总览
+nvme是一个允许主机软件与非易失性存储子系统通讯的interface，它针对企业级和消费级的ssd优化，并以寄存器级别的interface与PCIE interface关联
+1.1.1 NVMe over PCIe 和 NVMe over Fabricse
+NVMe over PCIE是nvme协议基于PCIE的实现，NVMe over Fabrics是nvme协议基于其他通讯协议，如以太网，InfiniBand（一种网络通信标准），光纤等等
+
+1.2 范围
+本篇spec定义了一个寄存器级别的可以与非易失性存储子系统通讯的interface，也对nvm子系统可用的标准命令集做了定义。
+
+1.3 超出范围
+
+1.4 操作原理
+NVMe 是一个可扩展的主机控制界面，被设计用来满足针对PCIE优化的企业级和消费级固态硬盘，该界面提供优化过的命令提交和完成路径。
+它包含支持并行操作的最高65535个IO列队，每个列队支持最多64K个待处理命令。许多企业级的功能也被支持，如端到端数据保护（T10 DIF，SNIA DIX标准），内置错误报告以及虚拟化
+该界面包含如下关键属性：
+* 命令提交以及完成不需要不可缓存的/内存映射 寄存器读取 *
+* 命令提交路径中单个内存映射寄存器写入的最大值是关键的 *
+支持多达65535个IO队列，每个IO队列支持最多64K待执行的命令
+每个IO列队的优先级可设置
+单个4K读命令的所有信息包含在64B的命令中，保证小IO操作的高效性
+高效，简化的命令集
+支持MSI/MSI-X终端集
+支持多namespace
+高效支持类似SR-IOV架构的IO虚拟化
+强化的错误报告以及管理
+支持多路IO和namespace共享
+本spec定义了简化的寄存器，包含如下功能：
+显示主控功能
+主控失效状态
+admin队列配置
+用于数量可扩展的CQ和SQ的寄存器
+
+PCIE控制器与单个PCI Function关联，主控的能力以及设置情况存储在主控寄存器（CAP）和Identify Controller数据结构中。
+namespace是一组可以被格式化为逻辑块的非易失存储。nvme控制器可通过namespace ID支持多个namespace空间。namespace可以通过namaspace management和
+namespace attachemnt命令来创建和删除。identify namespace可显示特定的namespace的能力和设置，这些能力和设置是通用的。
+
+nvme基于成对的CQ和SQ机制。命令由主机端软件放置在SQ中，完成的消息由主控放置在关联的CQ中，多个SQ可对应一个CQ，SQ和CQ都位于内存中。
+
+Admin SQ和对应的CQ用来进行控制器管理工作，例如创建和删除IO CQ和SQ，终止命令等，只有Admin命令集中的命令才会被提交到Admin SQ
+
+IO命令集用于一对IO队列，本sepc定义名为NVMe Command Set的一组IO命令集
+
+主机软件创建的队列数取决于controller最高支持多少，命令队列数量取决于主机系统配置以及预期的workload。例如一台主机的处理器有4个核心，
+那么每个核心对应一对CQ和SQ可以避免互锁以及数据结构可以再合适的处理器缓存中被创建。【page 8】
+在一个core中，可以单个CQ和SQ，也可以多个SQ一个CQ
